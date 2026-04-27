@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinuxKit — Student System Management Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1e2633;
+    --border: #30363d;
+    --green: #39d353;
+    --green-dim: #1a6b2a;
+    --cyan: #58a6ff;
+    --yellow: #e3b341;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #484f58;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Top bar */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .dots { display: flex; gap: 6px; }
+  .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+  }
+  .dot.red { background: #ff5f56; }
+  .dot.yellow { background: #ffbd2e; }
+  .dot.green { background: #27c93f; }
+
+  .topbar-title {
+    margin-left: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  .badge {
+    margin-left: auto;
+    background: var(--green-dim);
+    color: var(--green);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    border: 1px solid var(--green);
+    letter-spacing: 1px;
+  }
+
+  /* Layout */
+  .layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 41px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .sidebar-header {
+    padding: 16px 16px 8px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .menu-item:hover { background: var(--surface2); color: var(--text); }
+  .menu-item.active {
+    border-left-color: var(--green);
+    background: rgba(57, 211, 83, 0.08);
+    color: var(--green);
+  }
+
+  .menu-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-section {
+    margin-top: 12px;
+  }
+
+  /* Main panel */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Module panel */
+  .module-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .module-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .module-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .module-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Content area */
+  .content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* Controls */
+  .controls {
+    width: 280px;
+    padding: 16px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .control-group { margin-bottom: 20px; }
+
+  .control-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    margin-bottom: 6px;
+  }
+
+  .btn:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(88, 166, 255, 0.06); }
+  .btn.danger:hover { border-color: var(--red); color: var(--red); background: rgba(248,81,73,0.06); }
+  .btn.success:hover { border-color: var(--green); color: var(--green); background: rgba(57,211,83,0.06); }
+
+  .btn .cmd { color: var(--text-muted); font-size: 10px; margin-top: 2px; }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, select:focus { border-color: var(--cyan); }
+
+  select option { background: var(--surface); }
+
+  /* Terminal */
+  .terminal {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .terminal-header {
+    padding: 8px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .terminal-output {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+
+  .terminal-output::-webkit-scrollbar { width: 6px; }
+  .terminal-output::-webkit-scrollbar-track { background: transparent; }
+  .terminal-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .line { margin-bottom: 2px; }
+  .line.prompt span.host { color: var(--green); }
+  .line.prompt span.path { color: var(--cyan); }
+  .line.prompt span.sym { color: var(--text-muted); }
+  .line.output { color: var(--text-muted); }
+  .line.success { color: var(--green); }
+  .line.error { color: var(--red); }
+  .line.info { color: var(--cyan); }
+  .line.warning { color: var(--yellow); }
+  .line.header { color: var(--purple); font-weight: 600; }
+  .line.blank { height: 8px; }
+
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: var(--green);
+    animation: blink 1.2s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .stat-value { font-size: 20px; font-weight: 700; color: var(--green); margin: 4px 0 2px; font-family: 'Space Grotesk', sans-serif; }
+  .stat-sub { font-size: 10px; color: var(--text-muted); }
+
+  /* Progress bar */
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 6px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+  }
+
+  .progress-fill.green { background: var(--green); }
+  .progress-fill.yellow { background: var(--yellow); }
+  .progress-fill.red { background: var(--red); }
+
+  /* Dashboard view */
+  .dashboard-grid {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    overflow-y: auto;
+  }
+
+  .dash-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .dash-card:hover {
+    border-color: var(--cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(88,166,255,0.1);
+  }
+
+  .dash-card-icon { font-size: 28px; margin-bottom: 10px; }
+  .dash-card-title { font-size: 14px; font-weight: 600; color: var(--text); font-family: 'Space Grotesk', sans-serif; }
+  .dash-card-desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* File tree */
+  .file-tree { font-size: 12px; }
+  .tree-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .tree-item:hover { background: var(--surface2); }
+  .tree-item.dir { color: var(--cyan); }
+  .tree-item.file { color: var(--text); }
+  .tree-item.exec { color: var(--green); }
+  .indent { margin-left: 16px; }
+
+  /* Table */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .data-table th {
+    text-align: left;
+    padding: 6px 10px;
+    color: var(--text-dim);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--text-muted);
+  }
+  .data-table tr:hover td { background: var(--surface2); color: var(--text); }
+  .td-green { color: var(--green) !important; }
+  .td-red { color: var(--red) !important; }
+  .td-yellow { color: var(--yellow) !important; }
+  .td-cyan { color: var(--cyan) !important; }
+
+  /* Home screen */
+  .home {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .welcome-banner {
+    background: linear-gradient(135deg, rgba(57,211,83,0.12), rgba(88,166,255,0.08));
+    border: 1px solid rgba(57,211,83,0.3);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .welcome-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--green);
+    font-family: 'Space Grotesk', sans-serif;
+    margin-bottom: 6px;
+  }
+
+  .welcome-sub { font-size: 13px; color: var(--text-muted); }
+
+  .sysinfo-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+  }
+
+  .sysinfo-pill {
+    background: rgba(22,27,34,0.8);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .sysinfo-pill span { color: var(--cyan); }
+
+  .modules-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+
+  .mod-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mod-card:hover {
+    border-color: var(--green);
+    background: rgba(57,211,83,0.05);
+  }
+
+  .mod-card-icon { font-size: 22px; margin-bottom: 8px; }
+  .mod-card-name { font-size: 13px; color: var(--text); font-weight: 600; font-family: 'Space Grotesk', sans-serif; }
+  .mod-card-cmds { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+
+  /* Tooltip */
+  .hint {
+    background: rgba(57,211,83,0.1);
+    border: 1px solid rgba(57,211,83,0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--green);
+    margin-bottom: 10px;
+  }
+
+  /* Hidden */
+  .hidden { display: none !important; }
+
+  /* Mobile */
+  @media(max-width: 700px) {
+    .sidebar { width: 50px; }
+    .menu-item span:not(.menu-icon) { display: none; }
+    .controls { width: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="dots">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+  </div>
+  <div class="topbar-title">linuxkit@student-vm:~$ — Linux System Management Toolkit</div>
+  <div class="badge">v1.0 LIVE</div>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">Navigation</div>
+    <div class="menu-item active" onclick="showModule('home')" id="nav-home">
+      <span class="menu-icon">🏠</span> <span>Dashboard</span>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-header">Modules</div>
+      <div class="menu-item" onclick="showModule('files')" id="nav-files">
+        <span class="menu-icon">📁</span> <span>File Manager</span>
+      </div>
+      <div class="menu-item" onclick="showModule('users')" id="nav-users">
+        <span class="menu-icon">👤</span> <span>User Manager</span>
+      </div>
+      <div class="menu-item" onclick="showModule('disk')" id="nav-disk">
+        <span class="menu-icon">💾</span> <span>Disk Usage</span>
+      </div>
+      <div class="menu-item" onclick="showModule('process')" id="nav-process">
+        <span class="menu-icon">⚙️</span> <span>Processes</span>
+      </div>
+      <div class="menu-item" onclick="showModule('network')" id="nav-network">
+        <span class="menu-icon">🌐</span> <span>Network</span>
+      </div>
+      <div class="menu-item" onclick="showModule('system')" id="nav-system">
+        <span class="menu-icon">🔧</span> <span>System Info</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-header">Terminal</div>
+      <div class="menu-item" onclick="showModule('terminal')" id="nav-terminal">
+        <span class="menu-icon">💻</span> <span>Terminal</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main" id="main-content">
+    <!-- HOME MODULE -->
+    <div id="module-home" class="home">
+      <div class="welcome-banner">
+        <div class="welcome-title">🐧 LinuxKit — Student Toolkit</div>
+        <div class="welcome-sub">A beginner-friendly Linux system management toolkit — CSCI 4950 Senior Project</div>
+        <div class="sysinfo-row">
+          <div class="sysinfo-pill">OS: <span>Ubuntu 22.04 LTS</span></div>
+          <div class="sysinfo-pill">Kernel: <span>5.15.0-91</span></div>
+          <div class="sysinfo-pill">Shell: <span>bash 5.1</span></div>
+          <div class="sysinfo-pill">Uptime: <span id="uptime-val">0d 00:00:00</span></div>
+          <div class="sysinfo-pill">User: <span>student</span></div>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card">
+          <div class="stat-label">CPU Usage</div>
+          <div class="stat-value" id="cpu-val">23%</div>
+          <div class="progress-bar"><div class="progress-fill green" id="cpu-bar" style="width:23%"></div></div>
+          <div class="stat-sub">4 cores active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Memory</div>
+          <div class="stat-value" id="mem-val">61%</div>
+          <div class="progress-bar"><div class="progress-fill yellow" id="mem-bar" style="width:61%"></div></div>
+          <div class="stat-sub">2.4GB / 4GB used</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Disk Used</div>
+          <div class="stat-value">48%</div>
+          <div class="progress-bar"><div class="progress-fill green" style="width:48%"></div></div>
+          <div class="stat-sub">24GB / 50GB</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Processes</div>
+          <div class="stat-value">142</div>
+          <div class="stat-sub">8 user, 134 system</div>
+        </div>
+      </div>
+
+      <div class="modules-title">Quick Access — All Modules</div>
+      <div class="modules-grid">
+        <div class="mod-card" onclick="showModule('files')">
+          <div class="mod-card-icon">📁</div>
+          <div class="mod-card-name">File Manager</div>
+          <div class="mod-card-cmds">ls, cp, mv, rm, mkdir, chmod</div>
+        </div>
+        <div class="mod-card" onclick="showModule('users')">
+          <div class="mod-card-icon">👤</div>
+          <div class="mod-card-name">User Manager</div>
+          <div class="mod-card-cmds">useradd, passwd, userdel, groups</div>
+        </div>
+        <div class="mod-card" onclick="showModule('disk')">
+          <div class="mod-card-icon">💾</div>
+          <div class="mod-card-name">Disk Usage</div>
+          <div class="mod-card-cmds">df, du, lsblk, fdisk -l</div>
+        </div>
+        <div class="mod-card" onclick="showModule('process')">
+          <div class="mod-card-icon">⚙️</div>
+          <div class="mod-card-name">Process Manager</div>
+          <div class="mod-card-cmds">ps, top, kill, htop, jobs</div>
+        </div>
+        <div class="mod-card" onclick="showModule('network')">
+          <div class="mod-card-icon">🌐</div>
+          <div class="mod-card-name">Network Info</div>
+          <div class="mod-card-cmds">ifconfig, ping, netstat, ss</div>
+        </div>
+        <div class="mod-card" onclick="showModule('system')">
+          <div class="mod-card-icon">🔧</div>
+          <div class="mod-card-name">System Info</div>
+          <div class="mod-card-cmds">uname, lscpu, free, uptime</div>
+        </div>
+        <div class="mod-card" onclick="showModule('terminal')">
+          <div class="mod-card-icon">💻</div>
+          <div class="mod-card-name">Terminal</div>
+          <div class="mod-card-cmds">Interactive command simulator</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILE MANAGER MODULE -->
+    <div id="module-files" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">📁 File Manager</div>
+        <div class="module-desc">Browse, manage, and modify files — ls, cp, mv, rm, mkdir, chmod, chown</div>
+      </div>
+      <div class="content">
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-label">Current Path</div>
+            <input type="text" id="file-path" value="/home/student" placeholder="/home/student">
+          </div>
+          <div class="control-group">
+            <div class="control-label">Actions</div>
+            <button class="btn success" onclick="fileCmd('ls')">📋 List Files (ls -la)<div class="cmd">$ ls -la</div></button>
+            <button class="btn" onclick="fileCmd('pwd')">📍 Show Location (pwd)<div class="cmd">$ pwd</div></button>
+            <button class="btn" onclick="fileCmd('tree')">🌳 Directory Tree<div class="cmd">$ tree -L 2</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Create / Remove</div>
+            <input type="text" id="new-dirname" placeholder="folder name">
+            <button class="btn success" onclick="fileCmd('mkdir')">➕ Make Directory (mkdir)<div class="cmd">$ mkdir [name]</div></button>
+            <input type="text" id="new-filename" placeholder="file.txt">
+            <button class="btn success" onclick="fileCmd('touch')">📄 Create File (touch)<div class="cmd">$ touch [name]</div></button>
+            <input type="text" id="del-name" placeholder="file or folder">
+            <button class="btn danger" onclick="fileCmd('rm')">🗑️ Remove (rm)<div class="cmd">$ rm -r [name]</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Permissions</div>
+            <input type="text" id="chmod-target" placeholder="filename">
+            <select id="chmod-val">
+              <option value="755">755 — rwxr-xr-x (executable)</option>
+              <option value="644">644 — rw-r--r-- (readable)</option>
+              <option value="600">600 — rw------- (private)</option>
+              <option value="777">777 — rwxrwxrwx (all access)</option>
+              <option value="400">400 — r-------- (read only)</option>
+            </select>
+            <button class="btn" onclick="fileCmd('chmod')">🔒 Change Permissions (chmod)<div class="cmd">$ chmod [mode] [file]</div></button>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span>📁 file-manager terminal</span>
+            <span id="file-path-display" style="color:var(--cyan)">/home/student</span>
+          </div>
+          <div class="terminal-output" id="file-output">
+            <div class="line info">── LinuxKit File Manager initialized ──</div>
+            <div class="line output">Use the controls on the left to run file management commands.</div>
+            <div class="line output">Output will appear here in real-time.</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USER MANAGER MODULE -->
+    <div id="module-users" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">👤 User Manager</div>
+        <div class="module-desc">Add, remove, and manage users and groups — useradd, userdel, passwd, groups</div>
+      </div>
+      <div class="content">
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-label">View Users</div>
+            <button class="btn" onclick="userCmd('list')">👥 List All Users<div class="cmd">$ cat /etc/passwd</div></button>
+            <button class="btn" onclick="userCmd('whoami')">🙋 Current User (whoami)<div class="cmd">$ whoami</div></button>
+            <button class="btn" onclick="userCmd('groups')">🔑 Show Groups<div class="cmd">$ groups</div></button>
+            <button class="btn" onclick="userCmd('lastlog')">📜 Login History<div class="cmd">$ last</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Add User</div>
+            <input type="text" id="new-username" placeholder="username">
+            <select id="new-user-shell">
+              <option value="/bin/bash">Bash shell</option>
+              <option value="/bin/sh">sh shell</option>
+              <option value="/sbin/nologin">No login</option>
+            </select>
+            <button class="btn success" onclick="userCmd('add')">➕ Add User (useradd)<div class="cmd">$ useradd -m -s [shell] [user]</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Remove User</div>
+            <input type="text" id="del-username" placeholder="username">
+            <button class="btn danger" onclick="userCmd('del')">🗑️ Delete User (userdel)<div class="cmd">$ userdel -r [user]</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Password</div>
+            <input type="text" id="pass-username" placeholder="username">
+            <button class="btn" onclick="userCmd('passwd')">🔐 Set Password (passwd)<div class="cmd">$ passwd [user]</div></button>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span>👤 user-manager terminal</span>
+            <span style="color:var(--green)">root access simulated</span>
+          </div>
+          <div class="terminal-output" id="user-output">
+            <div class="line info">── LinuxKit User Manager initialized ──</div>
+            <div class="line output">Manage system users safely. All actions are simulated.</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DISK MODULE -->
+    <div id="module-disk" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">💾 Disk Usage Monitor</div>
+        <div class="module-desc">Monitor disk space and usage — df, du, lsblk</div>
+      </div>
+      <div class="content">
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-label">Disk Commands</div>
+            <button class="btn" onclick="diskCmd('df')">📊 Filesystem Usage (df -h)<div class="cmd">$ df -h</div></button>
+            <button class="btn" onclick="diskCmd('lsblk')">🖴 Block Devices (lsblk)<div class="cmd">$ lsblk</div></button>
+            <button class="btn" onclick="diskCmd('fdisk')">💿 Partition Table<div class="cmd">$ fdisk -l</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Directory Size</div>
+            <input type="text" id="du-path" placeholder="/home/student">
+            <button class="btn" onclick="diskCmd('du')">📁 Directory Size (du -sh)<div class="cmd">$ du -sh [path]</div></button>
+            <button class="btn" onclick="diskCmd('du-all')">📋 All Subdirs (du -h)<div class="cmd">$ du -h --max-depth=1</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Largest Files</div>
+            <button class="btn" onclick="diskCmd('largest')">🔍 Find Largest Files<div class="cmd">$ find / -size +50M 2>/dev/null</div></button>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span>💾 disk-monitor terminal</span>
+          </div>
+          <div class="terminal-output" id="disk-output">
+            <div class="line info">── LinuxKit Disk Monitor initialized ──</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROCESS MODULE -->
+    <div id="module-process" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">⚙️ Process Manager</div>
+        <div class="module-desc">View and manage running processes — ps, kill, top, jobs</div>
+      </div>
+      <div class="content">
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-label">View Processes</div>
+            <button class="btn" onclick="procCmd('ps')">📋 All Processes (ps aux)<div class="cmd">$ ps aux</div></button>
+            <button class="btn" onclick="procCmd('top')">📊 Top Processes<div class="cmd">$ top -b -n 1</div></button>
+            <button class="btn" onclick="procCmd('jobs')">📌 Background Jobs<div class="cmd">$ jobs</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Find Process</div>
+            <input type="text" id="grep-proc" placeholder="process name (e.g. bash)">
+            <button class="btn" onclick="procCmd('grep')">🔍 Search Process<div class="cmd">$ ps aux | grep [name]</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Kill Process</div>
+            <input type="number" id="kill-pid" placeholder="PID number">
+            <select id="kill-sig">
+              <option value="15">SIGTERM (15) — graceful</option>
+              <option value="9">SIGKILL (9) — force kill</option>
+              <option value="1">SIGHUP (1) — reload</option>
+            </select>
+            <button class="btn danger" onclick="procCmd('kill')">⛔ Kill Process<div class="cmd">$ kill -[sig] [pid]</div></button>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span>⚙️ process-manager terminal</span>
+          </div>
+          <div class="terminal-output" id="proc-output">
+            <div class="line info">── LinuxKit Process Manager initialized ──</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NETWORK MODULE -->
+    <div id="module-network" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">🌐 Network Monitor</div>
+        <div class="module-desc">View network info and connectivity — ifconfig, ping, netstat, ss</div>
+      </div>
+      <div class="content">
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-label">Network Info</div>
+            <button class="btn" onclick="netCmd('ifconfig')">🖧 Interfaces (ifconfig)<div class="cmd">$ ifconfig -a</div></button>
+            <button class="btn" onclick="netCmd('ip')">📡 IP Addresses (ip a)<div class="cmd">$ ip addr show</div></button>
+            <button class="btn" onclick="netCmd('route')">🗺️ Routing Table<div class="cmd">$ ip route</div></button>
+            <button class="btn" onclick="netCmd('netstat')">🔌 Open Ports (netstat)<div class="cmd">$ netstat -tuln</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Ping Test</div>
+            <input type="text" id="ping-host" value="8.8.8.8" placeholder="hostname or IP">
+            <button class="btn" onclick="netCmd('ping')">📶 Ping Host<div class="cmd">$ ping -c 4 [host]</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">DNS</div>
+            <input type="text" id="dns-host" value="google.com" placeholder="domain name">
+            <button class="btn" onclick="netCmd('dns')">🔎 DNS Lookup (nslookup)<div class="cmd">$ nslookup [domain]</div></button>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span>🌐 network-monitor terminal</span>
+          </div>
+          <div class="terminal-output" id="net-output">
+            <div class="line info">── LinuxKit Network Monitor initialized ──</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM INFO MODULE -->
+    <div id="module-system" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">🔧 System Information</div>
+        <div class="module-desc">View detailed system hardware and OS info — uname, lscpu, free, lshw</div>
+      </div>
+      <div class="content">
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-label">System</div>
+            <button class="btn" onclick="sysCmd('uname')">🐧 OS Info (uname -a)<div class="cmd">$ uname -a</div></button>
+            <button class="btn" onclick="sysCmd('hostname')">🖥️ Hostname<div class="cmd">$ hostname -f</div></button>
+            <button class="btn" onclick="sysCmd('uptime')">⏱️ Uptime & Load<div class="cmd">$ uptime</div></button>
+            <button class="btn" onclick="sysCmd('date')">📅 Date & Time<div class="cmd">$ date</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Hardware</div>
+            <button class="btn" onclick="sysCmd('cpu')">🧠 CPU Info (lscpu)<div class="cmd">$ lscpu</div></button>
+            <button class="btn" onclick="sysCmd('mem')">💾 Memory (free -h)<div class="cmd">$ free -h</div></button>
+            <button class="btn" onclick="sysCmd('lshw')">🔩 Hardware List<div class="cmd">$ lshw -short</div></button>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Updates</div>
+            <button class="btn success" onclick="sysCmd('update')">🔄 Check Updates<div class="cmd">$ apt list --upgradable</div></button>
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header"><span>🔧 system-info terminal</span></div>
+          <div class="terminal-output" id="sys-output">
+            <div class="line info">── LinuxKit System Info initialized ──</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TERMINAL MODULE -->
+    <div id="module-terminal" class="module-panel hidden">
+      <div class="module-header">
+        <div class="module-title">💻 Interactive Terminal</div>
+        <div class="module-desc">Type Linux commands directly — simulated safe shell environment</div>
+      </div>
+      <div class="content" style="flex-direction:column">
+        <div class="terminal" style="flex:1">
+          <div class="terminal-header">
+            <span>bash 5.1 — student@student-vm:~$</span>
+            <span style="color:var(--text-dim);font-size:10px">simulated environment</span>
+          </div>
+          <div class="terminal-output" id="term-output" style="flex:1">
+            <div class="line success">LinuxKit Interactive Terminal v1.0</div>
+            <div class="line output">Type a Linux command below. Supported: ls, pwd, whoami, uname, df, ps, date, echo, clear, help, cat</div>
+            <div class="line blank"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);">
+          <span style="color:var(--green);font-size:13px;white-space:nowrap">student@vm:~$&nbsp;</span>
+          <input type="text" id="term-input" placeholder="type a command and press Enter..."
+            style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;"
+            onkeydown="handleTerminalInput(event)">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let currentModule = 'home';
+const fileSystem = {
+  '/home/student': ['Documents', 'Downloads', 'Pictures', 'toolkit.sh', 'notes.txt', 'README.md'],
+  '/home/student/Documents': ['report.pdf', 'homework.txt', 'project.py'],
+  '/home/student/Downloads': ['ubuntu-22.04.iso', 'vscode.deb'],
+  '/home/student/Pictures': ['screenshot.png', 'wallpaper.jpg'],
+  '/etc': ['passwd', 'hosts', 'fstab', 'bash.bashrc', 'crontab'],
+  '/var': ['log', 'mail', 'spool', 'www'],
+  '/tmp': ['tmpfile123', 'sess_abc']
+};
+
+const users = [
+  { name: 'root', uid: 0, gid: 0, home: '/root', shell: '/bin/bash', desc: 'root' },
+  { name: 'student', uid: 1000, gid: 1000, home: '/home/student', shell: '/bin/bash', desc: 'Student User' },
+  { name: 'daemon', uid: 1, gid: 1, home: '/usr/sbin', shell: '/usr/sbin/nologin', desc: 'daemon' },
+  { name: 'www-data', uid: 33, gid: 33, home: '/var/www', shell: '/usr/sbin/nologin', desc: 'www-data' },
+  { name: 'syslog', uid: 104, gid: 110, home: '/home/syslog', shell: '/usr/sbin/nologin', desc: 'syslog' },
+];
+
+const processes = [
+  { pid: 1, ppid: 0, user: 'root', cpu: 0.0, mem: 0.1, cmd: 'systemd', status: 'S' },
+  { pid: 2, ppid: 0, user: 'root', cpu: 0.0, mem: 0.0, cmd: 'kthreadd', status: 'S' },
+  { pid: 523, ppid: 1, user: 'root', cpu: 0.1, mem: 0.3, cmd: 'sshd', status: 'S' },
+  { pid: 742, ppid: 1, user: 'root', cpu: 0.0, mem: 0.2, cmd: 'cron', status: 'S' },
+  { pid: 1001, ppid: 523, user: 'student', cpu: 0.2, mem: 0.4, cmd: 'bash', status: 'S' },
+  { pid: 1042, ppid: 1001, user: 'student', cpu: 12.5, mem: 2.1, cmd: 'python3 toolkit.py', status: 'R' },
+  { pid: 1107, ppid: 1, user: 'www-data', cpu: 0.3, mem: 1.2, cmd: 'apache2', status: 'S' },
+  { pid: 1312, ppid: 1001, user: 'student', cpu: 0.0, mem: 0.3, cmd: 'vim notes.txt', status: 'S' },
+  { pid: 1400, ppid: 1001, user: 'student', cpu: 3.1, mem: 0.8, cmd: 'top', status: 'R' },
+];
+
+// ── Module Navigation ──
+function showModule(name) {
+  document.querySelectorAll('.module-panel, .home').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+  const mod = document.getElementById('module-' + name);
+  if (mod) mod.classList.remove('hidden');
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+  currentModule = name;
+}
+
+// ── Terminal Output Helper ──
+function appendLine(outputId, text, cls = 'output') {
+  const out = document.getElementById(outputId);
+  if (!out) return;
+  const line = document.createElement('div');
+  line.className = 'line ' + cls;
+  line.innerHTML = text;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function appendPrompt(outputId, cmd, path = '/home/student') {
+  const out = document.getElementById(outputId);
+  if (!out) return;
+  const line = document.createElement('div');
+  line.className = 'line prompt';
+  line.innerHTML = `<span class="host">student@vm</span><span class="sym">:</span><span class="path">${path}</span><span class="sym">$ </span>${escapeHtml(cmd)}`;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function appendBlank(outputId) {
+  appendLine(outputId, '', 'blank');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── File Commands ──
+function fileCmd(cmd) {
+  const out = 'file-output';
+  const path = document.getElementById('file-path').value || '/home/student';
+
+  if (cmd === 'ls') {
+    appendPrompt(out, `ls -la ${path}`);
+    appendLine(out, `total ${Math.floor(Math.random()*80)+20}`, 'output');
+    appendLine(out, `drwxr-xr-x  5 student student 4096 Apr 27 10:32 .`, 'output');
+    appendLine(out, `drwxr-xr-x  3 root    root    4096 Jan 15 09:00 ..`, 'output');
+    const files = fileSystem[path] || ['file1.txt', 'file2.sh'];
+    files.forEach(f => {
+      const isDir = !f.includes('.');
+      const isExec = f.endsWith('.sh') || f.endsWith('.py');
+      const perm = isDir ? 'drwxr-xr-x' : isExec ? '-rwxr-xr-x' : '-rw-r--r--';
+      const size = Math.floor(Math.random()*9000)+100;
+      appendLine(out, `${perm}  1 student student ${size} Apr 27 10:${String(Math.floor(Math.random()*59)).padStart(2,'0')} <span class="${isDir?'td-cyan':isExec?'td-green':''}">${f}</span>`, 'output');
+    });
+  } else if (cmd === 'pwd') {
+    appendPrompt(out, 'pwd');
+    appendLine(out, path, 'success');
+  } else if (cmd === 'tree') {
+    appendPrompt(out, `tree -L 2 ${path}`);
+    appendLine(out, path, 'td-cyan');
+    const files = fileSystem[path] || [];
+    files.forEach((f,i) => {
+      const isLast = i === files.length-1;
+      appendLine(out, `${isLast?'└──':'├──'} ${f}`, 'output');
+    });
+    appendLine(out, `<span class="td-green">${files.length} items</span>`, 'output');
+  } else if (cmd === 'mkdir') {
+    const name = document.getElementById('new-dirname').value;
+    if (!name) { appendLine(out, 'Error: provide a directory name', 'error'); return; }
+    appendPrompt(out, `mkdir -p ${path}/${name}`);
+    appendLine(out, `Directory '${name}' created successfully`, 'success');
+    document.getElementById('new-dirname').value = '';
+  } else if (cmd === 'touch') {
+    const name = document.getElementById('new-filename').value;
+    if (!name) { appendLine(out, 'Error: provide a file name', 'error'); return; }
+    appendPrompt(out, `touch ${path}/${name}`);
+    appendLine(out, `File '${name}' created (0 bytes)`, 'success');
+    document.getElementById('new-filename').value = '';
+  } else if (cmd === 'rm') {
+    const name = document.getElementById('del-name').value;
+    if (!name) { appendLine(out, 'Error: provide a file/folder name', 'error'); return; }
+    appendPrompt(out, `rm -r ${path}/${name}`);
+    appendLine(out, `'${name}' removed`, 'warning');
+    document.getElementById('del-name').value = '';
+  } else if (cmd === 'chmod') {
+    const target = document.getElementById('chmod-target').value;
+    const mode = document.getElementById('chmod-val').value;
+    if (!target) { appendLine(out, 'Error: provide a filename', 'error'); return; }
+    appendPrompt(out, `chmod ${mode} ${path}/${target}`);
+    const perms = {'755':'-rwxr-xr-x','644':'-rw-r--r--','600':'-rw-------','777':'-rwxrwxrwx','400':'-r--------'};
+    appendLine(out, `Permissions changed: ${perms[mode]} (${mode}) on '${target}'`, 'success');
+    document.getElementById('chmod-target').value = '';
+  }
+  appendBlank(out);
+  document.getElementById('file-path-display').textContent = path;
+}
+
+// ── User Commands ──
+function userCmd(cmd) {
+  const out = 'user-output';
+  if (cmd === 'list') {
+    appendPrompt(out, 'cat /etc/passwd | head -20');
+    users.forEach(u => {
+      appendLine(out, `${u.name}:x:${u.uid}:${u.gid}:${u.desc}:${u.home}:${u.shell}`, 'output');
+    });
+  } else if (cmd === 'whoami') {
+    appendPrompt(out, 'whoami');
+    appendLine(out, 'student', 'success');
+    appendPrompt(out, 'id');
+    appendLine(out, 'uid=1000(student) gid=1000(student) groups=1000(student),4(adm),24(cdrom),27(sudo)', 'output');
+  } else if (cmd === 'groups') {
+    appendPrompt(out, 'groups');
+    appendLine(out, 'student adm cdrom sudo dip plugdev lpadmin', 'output');
+    appendPrompt(out, 'cat /etc/group | grep student');
+    appendLine(out, 'sudo:x:27:student', 'output');
+    appendLine(out, 'student:x:1000:', 'output');
+  } else if (cmd === 'lastlog') {
+    appendPrompt(out, 'last -10');
+    appendLine(out, 'student  pts/0  192.168.1.5  Mon Apr 27 09:15   still logged in', 'output');
+    appendLine(out, 'student  pts/1  192.168.1.5  Sun Apr 26 18:42 - 21:03  (02:21)', 'output');
+    appendLine(out, 'root     tty1              Sat Apr 25 08:00 - 08:05  (00:05)', 'output');
+    appendLine(out, 'wtmp begins Fri Apr 01 00:00:00 2025', 'output');
+  } else if (cmd === 'add') {
+    const uname = document.getElementById('new-username').value;
+    const shell = document.getElementById('new-user-shell').value;
+    if (!uname) { appendLine(out, 'Error: provide a username', 'error'); return; }
+    appendPrompt(out, `useradd -m -s ${shell} ${uname}`);
+    appendLine(out, `User '${uname}' created with home /home/${uname}`, 'success');
+    appendLine(out, `Default shell: ${shell}`, 'output');
+    appendLine(out, `⚠  Remember to set a password with: passwd ${uname}`, 'warning');
+    document.getElementById('new-username').value = '';
+  } else if (cmd === 'del') {
+    const uname = document.getElementById('del-username').value;
+    if (!uname) { appendLine(out, 'Error: provide a username', 'error'); return; }
+    if (uname === 'root' || uname === 'student') {
+      appendLine(out, `Error: Cannot delete system user '${uname}'`, 'error'); return;
+    }
+    appendPrompt(out, `userdel -r ${uname}`);
+    appendLine(out, `User '${uname}' deleted (home directory removed)`, 'warning');
+    document.getElementById('del-username').value = '';
+  } else if (cmd === 'passwd') {
+    const uname = document.getElementById('pass-username').value || 'student';
+    appendPrompt(out, `passwd ${uname}`);
+    appendLine(out, `New password: ••••••••`, 'output');
+    appendLine(out, `Retype new password: ••••••••`, 'output');
+    appendLine(out, `passwd: password updated successfully for '${uname}'`, 'success');
+    document.getElementById('pass-username').value = '';
+  }
+  appendBlank(out);
+}
+
+// ── Disk Commands ──
+function diskCmd(cmd) {
+  const out = 'disk-output';
+  if (cmd === 'df') {
+    appendPrompt(out, 'df -h');
+    appendLine(out, `Filesystem      Size  Used Avail Use% Mounted on`, 'header');
+    appendLine(out, `/dev/sda1        50G   24G   24G  49% /`, 'output');
+    appendLine(out, `tmpfs           2.0G  1.2M  2.0G   1% /dev/shm`, 'output');
+    appendLine(out, `/dev/sda2       200M   50M  140M  27% /boot`, 'output');
+    appendLine(out, `/dev/sdb1        1T   300G  700G  30% /data`, 'output');
+  } else if (cmd === 'lsblk') {
+    appendPrompt(out, 'lsblk');
+    appendLine(out, `NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT`, 'header');
+    appendLine(out, `sda      8:0    0   50G  0 disk`, 'output');
+    appendLine(out, `├─sda1   8:1    0   48G  0 part /`, 'output');
+    appendLine(out, `└─sda2   8:2    0    2G  0 part [SWAP]`, 'output');
+    appendLine(out, `sdb      8:16   0    1T  0 disk`, 'output');
+    appendLine(out, `└─sdb1   8:17   0    1T  0 part /data`, 'output');
+  } else if (cmd === 'fdisk') {
+    appendPrompt(out, 'sudo fdisk -l');
+    appendLine(out, `Disk /dev/sda: 50 GiB`, 'info');
+    appendLine(out, `Disk model: VBOX HARDDISK`, 'output');
+    appendLine(out, `Device     Boot   Start      End  Sectors Size Id Type`, 'header');
+    appendLine(out, `/dev/sda1  *       2048 100665343 100663296  48G 83 Linux`, 'output');
+    appendLine(out, `/dev/sda2     100665344 104857599   4192256   2G 82 Linux swap`, 'output');
+  } else if (cmd === 'du') {
+    const path = document.getElementById('du-path').value || '/home/student';
+    appendPrompt(out, `du -sh ${path}`);
+    appendLine(out, `${Math.floor(Math.random()*800)+50}M\t${path}`, 'output');
+  } else if (cmd === 'du-all') {
+    appendPrompt(out, 'du -h --max-depth=1 /home/student');
+    const items = [['Documents','42M'],['Downloads','1.2G'],['Pictures','350M'],['.',`1.6G`]];
+    items.forEach(([d,s]) => appendLine(out, `${s}\t/home/student/${d}`, 'output'));
+  } else if (cmd === 'largest') {
+    appendPrompt(out, 'find / -size +50M -printf "%s\\t%p\\n" 2>/dev/null | sort -rn | head -10');
+    appendLine(out, `1258291200\t/home/student/Downloads/ubuntu-22.04.iso`, 'output');
+    appendLine(out, `524288000\t/var/cache/apt/archives/linux-image.deb`, 'output');
+    appendLine(out, `314572800\t/home/student/Pictures/wallpaper.jpg`, 'output');
+    appendLine(out, `<span class="td-green">Search complete. 3 files found over 50MB.</span>`, 'output');
+  }
+  appendBlank(out);
+}
+
+// ── Process Commands ──
+function procCmd(cmd) {
+  const out = 'proc-output';
+  if (cmd === 'ps') {
+    appendPrompt(out, 'ps aux');
+    appendLine(out, `USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND`, 'header');
+    processes.forEach(p => {
+      const cpuColor = p.cpu > 10 ? 'td-red' : p.cpu > 3 ? 'td-yellow' : '';
+      const memColor = p.mem > 1 ? 'td-yellow' : '';
+      appendLine(out, `${p.user.padEnd(12)} ${String(p.pid).padEnd(5)} <span class="${cpuColor}">${p.cpu.toFixed(1).padStart(4)}</span> <span class="${memColor}">${p.mem.toFixed(1).padStart(4)}</span>  ${String(Math.floor(p.mem*10000+5000)).padStart(6)} ${String(Math.floor(p.mem*5000)).padStart(5)} ?        ${p.status}     10:00   0:0${Math.floor(p.cpu)} ${p.cmd}`, 'output');
+    });
+  } else if (cmd === 'top') {
+    appendPrompt(out, 'top -b -n 1 | head -20');
+    appendLine(out, `top - 10:32:01 up 2 days,  4:12,  1 user,  load average: 0.23, 0.18, 0.15`, 'info');
+    appendLine(out, `Tasks: 142 total,   2 running, 140 sleeping,   0 stopped,   0 zombie`, 'output');
+    appendLine(out, `%Cpu(s): 23.1 us,  4.2 sy,  0.0 ni, 71.8 id,  0.7 wa,  0.0 hi,  0.2 si`, 'output');
+    appendLine(out, `MiB Mem :   3936.0 total,    421.2 free,   2401.1 used,   1113.7 buff/cache`, 'output');
+    appendLine(out, ``, 'blank');
+    appendLine(out, `  PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND`, 'header');
+    processes.sort((a,b)=>b.cpu-a.cpu).slice(0,8).forEach(p => {
+      const cpuColor = p.cpu > 10 ? 'td-red' : p.cpu > 3 ? 'td-yellow' : '';
+      appendLine(out, `${String(p.pid).padStart(5)} ${p.user.padEnd(9)}  20   0  ${String(Math.floor(p.mem*10000+5000)).padStart(6)}  ${String(Math.floor(p.mem*2000)).padStart(5)}  ${String(Math.floor(p.mem*1000)).padStart(5)} ${p.status} <span class="${cpuColor}">${p.cpu.toFixed(1).padStart(5)}</span>  ${p.mem.toFixed(1).padStart(4)}   0:0${Math.floor(p.cpu/10)} ${p.cmd}`, 'output');
+    });
+  } else if (cmd === 'jobs') {
+    appendPrompt(out, 'jobs');
+    appendLine(out, `[1]+  Running    python3 toolkit.py &`, 'output');
+    appendLine(out, `[2]-  Stopped    vim notes.txt`, 'output');
+  } else if (cmd === 'grep') {
+    const name = document.getElementById('grep-proc').value;
+    if (!name) { appendLine(out, 'Error: enter a process name', 'error'); return; }
+    appendPrompt(out, `ps aux | grep ${name}`);
+    const found = processes.filter(p => p.cmd.toLowerCase().includes(name.toLowerCase()));
+    if (found.length === 0) {
+      appendLine(out, `No process matching '${name}' found`, 'warning');
+    } else {
+      found.forEach(p => appendLine(out, `${p.user.padEnd(12)} ${p.pid}  ${p.cpu.toFixed(1)}  ${p.mem.toFixed(1)}  ?  ${p.status}  ${p.cmd}`, 'output'));
+    }
+  } else if (cmd === 'kill') {
+    const pid = document.getElementById('kill-pid').value;
+    const sig = document.getElementById('kill-sig').value;
+    if (!pid) { appendLine(out, 'Error: enter a PID', 'error'); return; }
+    const sigNames = {'15':'SIGTERM','9':'SIGKILL','1':'SIGHUP'};
+    appendPrompt(out, `kill -${sig} ${pid}`);
+    const found = processes.find(p => p.pid == pid);
+    if (!found) {
+      appendLine(out, `kill: (${pid}): No such process`, 'error');
+    } else if (found.user === 'root' && sig !== '15') {
+      appendLine(out, `kill: (${pid}): Operation not permitted (root process)`, 'error');
+    } else {
+      appendLine(out, `Process ${pid} (${found.cmd}) received ${sigNames[sig]}`, found.user==='root'?'warning':'success');
+      if (sig === '9') appendLine(out, `Process ${pid} killed`, 'success');
+    }
+    document.getElementById('kill-pid').value = '';
+  }
+  appendBlank(out);
+}
+
+// ── Network Commands ──
+function netCmd(cmd) {
+  const out = 'net-output';
+  if (cmd === 'ifconfig') {
+    appendPrompt(out, 'ifconfig -a');
+    appendLine(out, `eth0: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500`, 'info');
+    appendLine(out, `        inet <span class="td-cyan">192.168.1.100</span>  netmask 255.255.255.0  broadcast 192.168.1.255`, 'output');
+    appendLine(out, `        inet6 fe80::a00:27ff:fe4e:66a1  prefixlen 64  scopeid 0x20&lt;link&gt;`, 'output');
+    appendLine(out, `        ether 08:00:27:4e:66:a1  txqueuelen 1000  (Ethernet)`, 'output');
+    appendLine(out, `        RX packets 142301  bytes 201.4M`, 'output');
+    appendLine(out, `lo: flags=73&lt;UP,LOOPBACK,RUNNING&gt;  mtu 65536`, 'info');
+    appendLine(out, `        inet <span class="td-cyan">127.0.0.1</span>  netmask 255.0.0.0`, 'output');
+  } else if (cmd === 'ip') {
+    appendPrompt(out, 'ip addr show');
+    appendLine(out, `1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536`, 'output');
+    appendLine(out, `    inet 127.0.0.1/8 scope host lo`, 'output');
+    appendLine(out, `2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500`, 'output');
+    appendLine(out, `    inet <span class="td-cyan">192.168.1.100/24</span> brd 192.168.1.255 scope global eth0`, 'output');
+  } else if (cmd === 'route') {
+    appendPrompt(out, 'ip route');
+    appendLine(out, `default via 192.168.1.1 dev eth0 proto dhcp metric 100`, 'output');
+    appendLine(out, `192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.100`, 'output');
+  } else if (cmd === 'netstat') {
+    appendPrompt(out, 'netstat -tuln');
+    appendLine(out, `Proto Recv-Q Send-Q Local Address    Foreign Address  State`, 'header');
+    appendLine(out, `tcp        0      0 0.0.0.0:22       0.0.0.0:*        <span class="td-green">LISTEN</span>`, 'output');
+    appendLine(out, `tcp        0      0 0.0.0.0:80       0.0.0.0:*        <span class="td-green">LISTEN</span>`, 'output');
+    appendLine(out, `tcp        0      0 127.0.0.1:5432   0.0.0.0:*        <span class="td-green">LISTEN</span>`, 'output');
+    appendLine(out, `udp        0      0 0.0.0.0:68       0.0.0.0:*`, 'output');
+  } else if (cmd === 'ping') {
+    const host = document.getElementById('ping-host').value || '8.8.8.8';
+    appendPrompt(out, `ping -c 4 ${host}`);
+    appendLine(out, `PING ${host} (${host}): 56 data bytes`, 'output');
+    [28,31,29,27].forEach((t,i) => appendLine(out, `64 bytes from ${host}: icmp_seq=${i} ttl=118 time=<span class="td-green">${t}.${Math.floor(Math.random()*9)+1} ms</span>`, 'output'));
+    appendLine(out, `--- ${host} ping statistics ---`, 'info');
+    appendLine(out, `4 packets transmitted, 4 received, 0% packet loss`, 'success');
+    appendLine(out, `rtt min/avg/max/mdev = 27.1/28.8/31.2/1.4 ms`, 'output');
+  } else if (cmd === 'dns') {
+    const host = document.getElementById('dns-host').value || 'google.com';
+    appendPrompt(out, `nslookup ${host}`);
+    appendLine(out, `Server:  8.8.8.8`, 'output');
+    appendLine(out, `Address: 8.8.8.8#53`, 'output');
+    appendLine(out, `Non-authoritative answer:`, 'output');
+    appendLine(out, `Name:   ${host}`, 'output');
+    appendLine(out, `Address: <span class="td-cyan">142.250.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}</span>`, 'output');
+  }
+  appendBlank(out);
+}
+
+// ── System Commands ──
+function sysCmd(cmd) {
+  const out = 'sys-output';
+  const now = new Date();
+  if (cmd === 'uname') {
+    appendPrompt(out, 'uname -a');
+    appendLine(out, `Linux student-vm 5.15.0-91-generic #101-Ubuntu SMP Tue Nov 14 13:30:08 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux`, 'output');
+    appendPrompt(out, 'cat /etc/os-release | head -6');
+    appendLine(out, `NAME="Ubuntu"`, 'output');
+    appendLine(out, `VERSION="22.04.3 LTS (Jammy Jellyfish)"`, 'output');
+    appendLine(out, `ID=ubuntu`, 'output');
+  } else if (cmd === 'hostname') {
+    appendPrompt(out, 'hostname -f');
+    appendLine(out, `student-vm.local`, 'success');
+    appendPrompt(out, 'hostname -I');
+    appendLine(out, `192.168.1.100`, 'output');
+  } else if (cmd === 'uptime') {
+    appendPrompt(out, 'uptime');
+    appendLine(out, ` ${now.toLocaleTimeString()} up 2 days,  4:12,  1 user,  load average: 0.23, 0.18, 0.15`, 'output');
+  } else if (cmd === 'date') {
+    appendPrompt(out, 'date');
+    appendLine(out, now.toString(), 'success');
+    appendPrompt(out, 'cal');
+    appendLine(out, `     April 2025`, 'info');
+    appendLine(out, `Su Mo Tu We Th Fr Sa`, 'output');
+    appendLine(out, ` 1  2  3  4  5  6  7`, 'output');
+    appendLine(out, ` 8  9 10 11 12 13 14`, 'output');
+    appendLine(out, `15 16 17 18 19 20 21`, 'output');
+    appendLine(out, `22 23 24 25 26 <span class="td-green">27</span> 28`, 'output');
+    appendLine(out, `29 30`, 'output');
+  } else if (cmd === 'cpu') {
+    appendPrompt(out, 'lscpu');
+    appendLine(out, `Architecture:            x86_64`, 'output');
+    appendLine(out, `CPU op-mode(s):          32-bit, 64-bit`, 'output');
+    appendLine(out, `Byte Order:              Little Endian`, 'output');
+    appendLine(out, `CPU(s):                  <span class="td-cyan">4</span>`, 'output');
+    appendLine(out, `Thread(s) per core:      2`, 'output');
+    appendLine(out, `Core(s) per socket:      2`, 'output');
+    appendLine(out, `Model name:              Intel(R) Core(TM) i5-8265U CPU @ 1.60GHz`, 'output');
+    appendLine(out, `CPU max MHz:             <span class="td-green">3900.0000</span>`, 'output');
+    appendLine(out, `L3 cache:                6 MiB`, 'output');
+  } else if (cmd === 'mem') {
+    appendPrompt(out, 'free -h');
+    appendLine(out, `               total        used        free      shared  buff/cache   available`, 'header');
+    appendLine(out, `Mem:           3.8Gi       2.4Gi       421Mi       124Mi       1.0Gi       1.1Gi`, 'output');
+    appendLine(out, `Swap:          2.0Gi        23Mi       1.9Gi`, 'output');
+  } else if (cmd === 'lshw') {
+    appendPrompt(out, 'lshw -short');
+    appendLine(out, `H/W path    Device      Class       Description`, 'header');
+    appendLine(out, `/0                      system      VirtualBox`, 'output');
+    appendLine(out, `/0/0                    bus         440FX - 82441FX PMC`, 'output');
+    appendLine(out, `/0/1        eth0        network     82540EM Gigabit Ethernet`, 'output');
+    appendLine(out, `/0/2        /dev/sda    disk        53 GB VBOX HARDDISK`, 'output');
+    appendLine(out, `/0/3                    processor   Intel Core i5-8265U`, 'output');
+    appendLine(out, `/0/4                    memory      4GiB System Memory`, 'output');
+  } else if (cmd === 'update') {
+    appendPrompt(out, 'apt list --upgradable 2>/dev/null');
+    appendLine(out, `Listing... Done`, 'output');
+    const pkgs = [
+      ['bash','5.1-6ubuntu1.1','5.1-6ubuntu1'],
+      ['curl','7.81.0-1ubuntu1.15','7.81.0-1ubuntu1.14'],
+      ['openssh-server','1:8.9p1-3ubuntu0.6','1:8.9p1-3ubuntu0.5'],
+    ];
+    pkgs.forEach(([p,n,o]) => appendLine(out, `${p}/${n} [upgradable from: ${o}]`, 'warning'));
+    appendLine(out, `<span class="td-cyan">3 packages can be upgraded. Run: sudo apt upgrade</span>`, 'info');
+  }
+  appendBlank(out);
+}
+
+// ── Interactive Terminal ──
+const termHistory = [];
+let histIdx = -1;
+
+function handleTerminalInput(e) {
+  if (e.key === 'Enter') {
+    const inp = document.getElementById('term-input');
+    const cmd = inp.value.trim();
+    if (!cmd) return;
+    termHistory.unshift(cmd);
+    histIdx = -1;
+    inp.value = '';
+    runTermCommand(cmd);
+  } else if (e.key === 'ArrowUp') {
+    if (histIdx < termHistory.length - 1) histIdx++;
+    document.getElementById('term-input').value = termHistory[histIdx] || '';
+    e.preventDefault();
+  } else if (e.key === 'ArrowDown') {
+    if (histIdx > 0) histIdx--;
+    else { histIdx = -1; document.getElementById('term-input').value = ''; return; }
+    document.getElementById('term-input').value = termHistory[histIdx] || '';
+  }
+}
+
+function runTermCommand(cmd) {
+  const out = 'term-output';
+  const parts = cmd.trim().split(/\s+/);
+  const base = parts[0];
+  appendPrompt(out, cmd);
+
+  const responses = {
+    'ls': () => { appendLine(out, 'Documents  Downloads  Pictures  README.md  notes.txt  toolkit.sh', 'output'); },
+    'ls -la': () => {
+      appendLine(out, 'total 48', 'output');
+      appendLine(out, 'drwxr-xr-x 5 student student 4096 Apr 27 10:32 .', 'output');
+      appendLine(out, '-rw-r--r-- 1 student student 1234 Apr 27 09:10 README.md', 'output');
+      appendLine(out, '-rw-r--r-- 1 student student  256 Apr 26 18:00 notes.txt', 'output');
+      appendLine(out, '-rwxr-xr-x 1 student student 8192 Apr 25 15:30 toolkit.sh', 'success');
+    },
+    'pwd': () => appendLine(out, '/home/student', 'success'),
+    'whoami': () => appendLine(out, 'student', 'success'),
+    'id': () => appendLine(out, 'uid=1000(student) gid=1000(student) groups=1000(student),27(sudo)', 'output'),
+    'uname': () => appendLine(out, 'Linux', 'output'),
+    'uname -a': () => appendLine(out, 'Linux student-vm 5.15.0-91-generic #101-Ubuntu SMP x86_64 GNU/Linux', 'output'),
+    'date': () => appendLine(out, new Date().toString(), 'success'),
+    'uptime': () => appendLine(out, ` ${new Date().toLocaleTimeString()} up 2 days, 4:12,  1 user,  load average: 0.23, 0.18, 0.15`, 'output'),
+    'df': () => {
+      appendLine(out, 'Filesystem     Size  Used Avail Use% Mounted on', 'header');
+      appendLine(out, '/dev/sda1       50G   24G   24G  49% /', 'output');
+    },
+    'df -h': () => {
+      appendLine(out, 'Filesystem      Size  Used Avail Use% Mounted on', 'header');
+      appendLine(out, '/dev/sda1        50G   24G   24G  49% /', 'output');
+      appendLine(out, 'tmpfs           2.0G  1.2M  2.0G   1% /dev/shm', 'output');
+    },
+    'ps': () => {
+      appendLine(out, 'PID TTY          TIME CMD', 'header');
+      appendLine(out, '1001 pts/0    00:00:00 bash', 'output');
+      appendLine(out, '1400 pts/0    00:00:00 ps', 'output');
+    },
+    'ps aux': () => {
+      appendLine(out, 'USER       PID %CPU %MEM CMD', 'header');
+      appendLine(out, 'root         1  0.0  0.1 systemd', 'output');
+      appendLine(out, 'student   1001  0.2  0.4 bash', 'output');
+      appendLine(out, 'student   1042 12.5  2.1 python3 toolkit.py', 'output');
+    },
+    'free': () => appendLine(out, 'Mem:     3936000  2401100   421200  124000  1113700  1110900', 'output'),
+    'free -h': () => {
+      appendLine(out, '               total   used   free', 'header');
+      appendLine(out, 'Mem:           3.8Gi  2.4Gi  421Mi', 'output');
+      appendLine(out, 'Swap:          2.0Gi   23Mi  1.9Gi', 'output');
+    },
+    'clear': () => { document.getElementById(out).innerHTML = ''; return; },
+    'help': () => {
+      appendLine(out, '── LinuxKit Terminal — Supported Commands ──', 'header');
+      ['ls', 'ls -la', 'pwd', 'whoami', 'id', 'uname', 'uname -a', 'date', 'uptime', 'df', 'df -h', 'ps', 'ps aux', 'free', 'free -h', 'clear', 'echo [text]', 'cat [file]', 'man [cmd]'].forEach(c => appendLine(out, `  ${c}`, 'output'));
+    },
+  };
+
+  // echo command
+  if (base === 'echo') {
+    const text = parts.slice(1).join(' ').replace(/^["']|["']$/g, '');
+    appendLine(out, text || '', 'output');
+    return;
+  }
+
+  // cat command
+  if (base === 'cat') {
+    const file = parts[1];
+    if (!file) { appendLine(out, 'cat: missing operand', 'error'); return; }
+    const fakeFiles = {
+      'notes.txt': 'My Linux study notes\n- chmod changes permissions\n- df shows disk usage\n- ps shows processes',
+      'README.md': '# LinuxKit Toolkit\nA student-friendly Linux system management tool.\nAuthor: CSCI 4950 Senior Project',
+      '/etc/hosts': '127.0.0.1 localhost\n127.0.1.1 student-vm\n::1 localhost ip6-localhost',
+    };
+    const content = fakeFiles[file] || fakeFiles['/' + file];
+    if (content) content.split('\n').forEach(l => appendLine(out, escapeHtml(l), 'output'));
+    else appendLine(out, `cat: ${file}: No such file or directory`, 'error');
+    return;
+  }
+
+  // man command
+  if (base === 'man') {
+    const topic = parts[1];
+    if (!topic) { appendLine(out, 'What manual page do you want?', 'error'); return; }
+    const mans = { 'ls':'list directory contents', 'df':'report file system space usage', 'chmod':'change file mode bits', 'ps':'report process status', 'grep':'print lines matching a pattern', 'useradd':'create a new user or update default new user info' };
+    if (mans[topic]) appendLine(out, `${topic.toUpperCase()}(1) — ${mans[topic]}`, 'info');
+    else appendLine(out, `No manual entry for ${topic}`, 'error');
+    return;
+  }
+
+  const fn = responses[cmd];
+  if (fn) fn();
+  else appendLine(out, `bash: ${base}: command not found (try 'help' for a list of supported commands)`, 'error');
+
+  appendBlank(out);
+}
+
+// ── Live Stats ──
+let startTime = Date.now();
+function updateStats() {
+  const cpu = Math.floor(15 + Math.random() * 40);
+  const mem = Math.floor(50 + Math.random() * 25);
+  const elapsed = Date.now() - startTime;
+  const s = Math.floor(elapsed/1000) % 60;
+  const m = Math.floor(elapsed/60000) % 60;
+  const h = Math.floor(elapsed/3600000) % 24;
+  const d = Math.floor(elapsed/86400000);
+  const cpuEl = document.getElementById('cpu-val');
+  const memEl = document.getElementById('mem-val');
+  const cpuBar = document.getElementById('cpu-bar');
+  const memBar = document.getElementById('mem-bar');
+  const uptimeEl = document.getElementById('uptime-val');
+  if(cpuEl) { cpuEl.textContent = cpu + '%'; cpuBar.style.width = cpu + '%'; cpuBar.className = 'progress-fill ' + (cpu>80?'red':cpu>50?'yellow':'green'); }
+  if(memEl) { memEl.textContent = mem + '%'; memBar.style.width = mem + '%'; memBar.className = 'progress-fill ' + (mem>80?'red':mem>60?'yellow':'green'); }
+  if(uptimeEl) uptimeEl.textContent = `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+setInterval(updateStats, 2000);
+updateStats();
+</script>
+</body>
+</html>
